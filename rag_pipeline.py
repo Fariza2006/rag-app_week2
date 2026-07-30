@@ -91,6 +91,77 @@ def answer_question(question: str, top_k: int = 3) -> dict:
     }
 
 
+# ------------------------------------------------------------------
+# Checkpoint 5: Mənbə istinadı ilə cavab generasiyası (doğrulanmış)
+# ------------------------------------------------------------------
+
+CITATION_SYSTEM_PROMPT = """Sən şirkət daxili sənədləri əsasında sual-cavab verən köməkçisən.
+
+QAYDALAR:
+1. Cavabını YALNIZ "KONTEKST" bölməsindəki mətnə əsaslandır, uydurma.
+2. Cavabını YALNIZ etibarlı JSON formatında ver, əlavə mətn yazma:
+   {"answer": "cavabın mətni", "sources": [{"source": "fayl_adı", "chunk_id": rəqəm}]}
+3. "sources" siyahısına YALNIZ real istifadə etdiyin mənbələri daxil et
+   (kontekstdə göstərilən [Mənbə N: fayl, chunk #ID] etiketlərindən dəqiq ID-ni götür).
+4. Əgər kontekstdə cavab yoxdursa, "answer" sahəsində bunu aydın bildir və
+   "sources" boş massiv ([]) olsun.
+"""
+
+
+def answer_with_citations(question: str, top_k: int = 3) -> dict:
+    """
+    Mənbə istinadı ilə cavab generasiyası - JSON formatında struktur cavab alır
+    və göstərilən mənbələrin HƏQİQƏTƏN çəkilmiş chunk-lardan olduğunu yoxlayır.
+
+    Bu, modelin sadəcə mətndə "mənbə budur" deməsinə etibar etmək əvəzinə,
+    real yoxlama aparır (model səhv/uydurma mənbə göstərsə, bunu aşkarlayır).
+
+    Return:
+        {
+            "question": str,
+            "answer": str,
+            "cited_sources": list[dict],       # model tərəfindən göstərilən, DOĞRULANMIŞ mənbələr
+            "unverified_citations": list[dict], # model göstərib, amma real chunk-larla üst-üstə düşməyən (şübhəli) istinadlar
+            "retrieved_chunks": list[dict],
+        }
+    """
+    from structured_output_helper import parse_json_response  # yerli köməkçi funksiya
+
+    retrieved_chunks = search(question, top_k=top_k)
+    user_prompt = build_rag_prompt(question, retrieved_chunks)
+
+    raw_answer = chat(system_prompt=CITATION_SYSTEM_PROMPT, user_prompt=user_prompt)
+    parsed = parse_json_response(raw_answer)
+
+    # Doğrulama üçün: real çəkilmiş (source, chunk_id) cütlərinin siyahısı
+    valid_keys = {
+        (item["metadata"]["source"], item["metadata"]["chunk_id"])
+        for item in retrieved_chunks
+    }
+
+    cited_sources = []
+    unverified_citations = []
+
+    if parsed and "sources" in parsed:
+        for src in parsed.get("sources", []):
+            key = (src.get("source"), src.get("chunk_id"))
+            if key in valid_keys:
+                cited_sources.append(src)
+            else:
+                # Model çəkilməyən/mövcud olmayan bir mənbəyə istinad edib - bu şübhəli haldır
+                unverified_citations.append(src)
+
+    answer_text = parsed.get("answer") if parsed else raw_answer
+
+    return {
+        "question": question,
+        "answer": answer_text,
+        "cited_sources": cited_sources,
+        "unverified_citations": unverified_citations,
+        "retrieved_chunks": retrieved_chunks,
+    }
+
+
 if __name__ == "__main__":
     test_questions = [
         "Neçə gün illik ödənişli məzuniyyət haqqım var?",
@@ -106,3 +177,17 @@ if __name__ == "__main__":
         for item in result["retrieved_chunks"]:
             meta = item["metadata"]
             print(f"  - {meta['source']} (chunk #{meta['chunk_id']}, məsafə={item['distance']:.4f})")
+
+    print(f"\n\n{'=' * 60}")
+    print("CHECKPOINT 5: DOĞRULANMIŞ MƏNBƏ İSTİNADI TESTİ")
+    print("=" * 60)
+
+    for q in test_questions:
+        print(f"\nSUAL: {q}")
+        result = answer_with_citations(q, top_k=2)
+        print(f"CAVAB: {result['answer']}")
+        print(f"Doğrulanmış mənbələr: {result['cited_sources']}")
+        if result["unverified_citations"]:
+            print(f"⚠️  ŞÜBHƏLİ (doğrulanmayan) istinadlar: {result['unverified_citations']}")
+        else:
+            print("Şübhəli istinad yoxdur ✅")

@@ -182,12 +182,44 @@ python rag_pipeline.py
 ```
 rag-app/
 ├── documents/company_handbook.txt
-├── ingest.py           # Checkpoint 1
-├── embeddings.py        # Checkpoint 2
-├── vector_store.py      # Checkpoint 3
-├── llm_client.py         # köməkçi: sadə LLM chat client
-├── rag_pipeline.py       # Checkpoint 4: retrieval + prompt qurulması
+├── ingest.py                       # Checkpoint 1
+├── embeddings.py                    # Checkpoint 2
+├── vector_store.py                  # Checkpoint 3
+├── llm_client.py                     # köməkçi: sadə LLM chat client
+├── rag_pipeline.py                   # Checkpoint 4 + 5
+├── structured_output_helper.py       # köməkçi: JSON parsing
 ├── .env.example
 ├── .gitignore
 └── README.md
 ```
+
+---
+
+# Checkpoint 5: Mənbə İstinadı ilə Cavab Generasiyası
+
+`answer_with_citations()` funksiyası cavabın **hansı sənəd/chunk-dan gəldiyini** göstərir, amma bunu modelin sözünə güvənərək deyil, **doğrulanmış** şəkildə edir.
+
+## Niyə sadəcə "modelə mənbə göstər" demək kifayət deyil
+
+Checkpoint 4-də model artıq mətndə mənbə adı çəkirdi, amma bu, **yoxlanılmamış** idi — model səhvən mövcud olmayan bir chunk-a istinad edə bilər (halüsinasiya). Checkpoint 5-də bunu düzəldirik:
+
+1. Modeldən **strukturlaşdırılmış JSON** istənilir: `{"answer": "...", "sources": [{"source": "...", "chunk_id": N}]}`
+2. Model göstərdiyi hər `(source, chunk_id)` cütü **real çəkilmiş chunk-ların siyahısı ilə tutuşdurulur**.
+3. Əgər model mövcud olmayan bir mənbəyə istinad edibsə, bu **`unverified_citations`** siyahısına düşür (şübhəli/potensial halüsinasiya kimi işarələnir), doğru olanlar isə **`cited_sources`**-a.
+
+## İşlətmək
+
+```bash
+python rag_pipeline.py
+```
+
+## Nümunə nəticə (format)
+
+```
+SUAL: Şirkət nə vaxt təsis edilib?
+CAVAB: Şirkət 2015-ci ildə təsis edilib.
+Doğrulanmış mənbələr: [{'source': 'company_handbook.txt', 'chunk_id': 0}]
+Şübhəli istinad yoxdur ✅
+```
+
+Bu yanaşma real production RAG sistemlərində vacibdir, çünki LLM-lər bəzən mətndə "mənbə" göstərsələr də, bu mənbə həqiqətdə istifadə olunmaya bilər — proqramatik doğrulama bu riski aşkarlayır.
