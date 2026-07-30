@@ -187,7 +187,23 @@ if __name__ == "__main__":
         result = answer_with_citations(q, top_k=2)
         print(f"CAVAB: {result['answer']}")
         print(f"Doğrulanmış mənbələr: {result['cited_sources']}")
-        if result["unverified_citations"]:
-            print(f"⚠️  ŞÜBHƏLİ (doğrulanmayan) istinadlar: {result['unverified_citations']}")
-        else:
-            print("Şübhəli istinad yoxdur ✅")
+
+    print(f"\n\n{'=' * 60}")
+    print("CHECKPOINT 6: 'SƏNƏDLƏRDƏ YOXDUR' HALININ TESTİ (hallüsinasiya trick-i)")
+    print("=" * 60)
+
+    # Bu sualların cavabı sənəddə ÜMUMİYYƏTLƏ yoxdur - model bunu etiraf etməlidir,
+    # uydurmamalıdır. Bu, RAG-ın ən tanınmış uğursuzluq nöqtəsidir.
+    hallucination_test_questions = [
+        "Şirkətin baş direktoru (CEO) kimdir?",
+        "Şirkətdə uşaq baxımı (daycare) xidməti varmı?",
+        "İşçilərə pulsuz nahar verilirmi?",
+    ]
+
+    for q in hallucination_test_questions:
+        print(f"\nSUAL (cavabı sənəddə YOXDUR): {q}")
+        result = answer_with_citations(q, top_k=2)
+        print(f"CAVAB: {result['answer']}")
+        print(f"Doğrulanmış mənbələr: {result['cited_sources']}")
+        print(f"Çəkilmiş chunk-ların məsafələri: "
+              f"{[round(item['distance'], 3) for item in result['retrieved_chunks']]}")

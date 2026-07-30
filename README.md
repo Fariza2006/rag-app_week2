@@ -223,3 +223,39 @@ Doğrulanmış mənbələr: [{'source': 'company_handbook.txt', 'chunk_id': 0}]
 ```
 
 Bu yanaşma real production RAG sistemlərində vacibdir, çünki LLM-lər bəzən mətndə "mənbə" göstərsələr də, bu mənbə həqiqətdə istifadə olunmaya bilər — proqramatik doğrulama bu riski aşkarlayır.
+
+---
+
+# Checkpoint 6: "Sənədlərdə Yoxdur" Halının İdarə Olunması
+
+Bu, RAG sistemlərinin **ən tanınmış uğursuzluq nöqtəsidir**: LLM sənəddə olmayan məlumatı **uydura** bilər (halüsinasiya). Bunu qəsdən test etdik.
+
+## Test metodologiyası
+
+Sənəddə (`company_handbook.txt`) **ümumiyyətlə olmayan** 3 sual seçildi:
+1. "Şirkətin baş direktoru (CEO) kimdir?" — sənəddə heç bir şəxs adı yoxdur
+2. "Şirkətdə uşaq baxımı (daycare) xidməti varmı?" — belə bir siyasət sənəddə yoxdur
+3. "İşçilərə pulsuz nahar verilirmi?" — sənəddə nahar haqqında heç nə deyilmir
+
+## Necə qorunub
+
+1. **System prompt**-da açıq qayda var: *"Əgər kontekstdə cavab yoxdursa, uydurma — açıq bildir"*
+2. Retrieval yenə də ən "oxşar" chunk-ları qaytaracaq (Chroma həmişə nəticə verir), amma bu chunk-ların **məsafəsi (distance) yüksək olacaq** — bu, aşağı oxşarlığın işarəsidir və model bunu nəzərə alaraq "kontekstdə yoxdur" deməlidir.
+3. Model cavabında konkret uydurma fakt (məsələn, saxta şəxs adı) verməməlidir.
+
+## İşlətmək
+
+```bash
+python rag_pipeline.py
+```
+
+## Nümunə nəticə (format)
+
+```
+SUAL (cavabı sənəddə YOXDUR): Şirkətin baş direktoru (CEO) kimdir?
+CAVAB: Kontekstdə şirkətin baş direktoru haqqında məlumat yoxdur.
+Doğrulanmış mənbələr: []
+Çəkilmiş chunk-ların məsafələri: [1.24, 1.31]
+```
+
+Yüksək məsafə dəyərləri (1.2+) modelin niyə "yoxdur" deməli olduğunu izah edir — chunk-lar sualla mövzuca uzaqdır. Bu, sistemin həm retrieval, həm də prompt səviyyəsində halüsinasiyaya qarşı qorunduğunu göstərir.
