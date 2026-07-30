@@ -144,3 +144,50 @@ Bu, kiçik embedding modelinin (`all-MiniLM-L6-v2`) və çox kiçik sənəd topl
 ## Qeyd
 
 `chroma_db/` qovluğu `.gitignore`-dadır — bu, avtomatik yaranan verilənlər bazası faylıdır, GitHub-a yüklənmir (hər kəs öz kompüterində `python vector_store.py` işlədərək yenidən yarada bilər).
+
+---
+
+# Checkpoint 4: Retrieval + Prompt Qurulması
+
+`rag_pipeline.py` tam RAG axınını birləşdirir: **retrieval** (Chroma-dan ən oxşar chunk-ları tapmaq) + **prompt qurulması** (aydın kontekst/təlimat ayrımı ilə).
+
+## Niyə "aydın ayrım" vacibdir
+
+Prompt-da **KONTEKST** (sənəddən gələn xam mətn) və **TƏLİMAT** (modelə necə davranmalı olduğu göstərişi) **açıq başlıqlarla ayrılıb**:
+
+```
+### KONTEKST (yalnız bu mətnə əsaslan)
+[Mənbə 1: company_handbook.txt, chunk #2]
+...chunk mətni...
+
+### SUAL
+Neçə gün illik ödənişli məzuniyyət haqqım var?
+
+### TƏLİMAT
+Yuxarıdakı KONTEKST bölməsindəki məlumata əsasən SUAL-a cavab ver...
+```
+
+Bu ayrım iki səbəbdən vacibdir:
+1. **Model qarışıqlığın qarşısını alır** — sənəd mətni "təlimat" kimi qəbul edilmir (bu, sənəddə təsadüfən təlimat kimi görünən cümlə olsa belə, prompt injection-a bənzər riskin qarşısını alır).
+2. **Mənbə izlənilməsi asanlaşır** — hər chunk `[Mənbə N: fayl, chunk #ID]` etiketi ilə göndərilir ki, model cavabında bunu istinad edə bilsin (Checkpoint 5-in əsasını qoyur).
+
+## İşlətmək
+
+```bash
+python rag_pipeline.py
+```
+
+## Fayl strukturu (yenilənmiş)
+
+```
+rag-app/
+├── documents/company_handbook.txt
+├── ingest.py           # Checkpoint 1
+├── embeddings.py        # Checkpoint 2
+├── vector_store.py      # Checkpoint 3
+├── llm_client.py         # köməkçi: sadə LLM chat client
+├── rag_pipeline.py       # Checkpoint 4: retrieval + prompt qurulması
+├── .env.example
+├── .gitignore
+└── README.md
+```
