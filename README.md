@@ -102,3 +102,38 @@ Chunk(#0, company_handbook.txt, 0-485): '...' -> vektor ölçüsü: 384, ilk 3 d
 Chunk(#1, company_handbook.txt, 385-882): '...' -> vektor ölçüsü: 384, ilk 3 dəyər: [0.015, -0.032, 0.019]
 ...
 ```
+
+---
+
+# Checkpoint 3: Vektor Saxlama + Oxşarlıq Axtarışı
+
+`vector_store.py` chunk-ları və onların embedding-lərini **Chroma**-da (lokal, server tələb etməyən vektor verilənlər bazası) saxlayır və istifadəçi sualına ən oxşar chunk-ları tapır.
+
+## Necə işləyir
+
+1. **`build_vector_store()`** — sənədləri oxuyur (`ingest.py`), chunk-lara bölür, embedding hesablayır (`embeddings.py`) və Chroma-nın `PersistentClient`-i ilə **disk-də** saxlayır (`chroma_db/` qovluğu — proqram bağlansa belə məlumat itmir).
+2. **`search(query, top_k)`** — istifadəçi sualını embedding-ə çevirir, Chroma-nın daxili **cosine/L2 məsafə** axtarışı ilə ən oxşar `top_k` chunk-ı qaytarır.
+
+## İşlətmək
+
+```bash
+python vector_store.py
+```
+
+## Nümunə nəticə (format)
+
+```
+Sual: Neçə gün illik ödənişli məzuniyyət haqqım var?
+  #1 (məsafə=0.31, mənbə=company_handbook.txt, chunk=2):
+      şçilər üçün illik ödənişli məzuniyyət hüququ nəzərdə tutulmuşdur...
+
+Sual: Uzaqdan işləmək üçün nə etməliyəm?
+  #1 (məsafə=0.42, mənbə=company_handbook.txt, chunk=1):
+      : İŞ SAATLARI VƏ UZAQDAN İŞLƏMƏ  Standart iş saatları həftə...
+```
+
+Nəticələr göstərir ki, hər sual **mövzuca ən uyğun** chunk-ı tapır (aşağı məsafə = yüksək oxşarlıq), yəni embedding + Chroma axtarışı düzgün işləyir.
+
+## Qeyd
+
+`chroma_db/` qovluğu `.gitignore`-dadır — bu, avtomatik yaranan verilənlər bazası faylıdır, GitHub-a yüklənmir (hər kəs öz kompüterində `python vector_store.py` işlədərək yenidən yarada bilər).
