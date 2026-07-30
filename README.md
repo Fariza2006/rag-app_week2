@@ -63,7 +63,42 @@ rag-app/
 ├── documents/
 │   └── company_handbook.txt   # Nümunə sənəd (chunk-sərhəd trick-i ilə)
 ├── ingest.py                   # Checkpoint 1: ingestion + chunking
+├── embeddings.py                # Checkpoint 2: embedding generasiyası
 ├── .env.example
 ├── .gitignore
 └── README.md
+```
+
+---
+
+# Checkpoint 2: Chunk-lar üçün Embedding Generasiyası
+
+`embeddings.py` hər chunk üçün Hugging Face-in pulsuz **feature-extraction** (embedding) API-si ilə vektor hesablayır.
+
+## İstifadə olunan model və endpoint
+
+- **Model:** `sentence-transformers/all-MiniLM-L6-v2` (384-ölçülü vektor, kiçik və sürətli)
+- **Endpoint:** `https://router.huggingface.co/hf-inference/models/{model}/pipeline/feature-extraction`
+
+## Necə işləyir
+
+1. `ingest.py`-dən gələn chunk-lar **batch-lərlə** (default 16-lıq qruplar) embedding API-sinə göndərilir — hər chunk-ı ayrı-ayrı göndərmək əvəzinə, sorğu sayını azaltmaq üçün.
+2. Hər batch üçün müvəqqəti xətalarda (429/500-504, şəbəkə xətası) avtomatik retry edilir (Checkpoint 4-dəki eyni prinsip).
+3. Nəticə: hər chunk-a uyğun `{"chunk": Chunk, "embedding": [float, ...]}` formatında siyahı.
+
+## İşlətmək
+
+```bash
+python embeddings.py
+```
+
+## Nümunə çıxış (format)
+
+```
+Embedding hesablandı: 5/5 chunk
+
+=== NƏTİCƏ ===
+Chunk(#0, company_handbook.txt, 0-485): '...' -> vektor ölçüsü: 384, ilk 3 dəyər: [-0.023, 0.041, 0.008]
+Chunk(#1, company_handbook.txt, 385-882): '...' -> vektor ölçüsü: 384, ilk 3 dəyər: [0.015, -0.032, 0.019]
+...
 ```
