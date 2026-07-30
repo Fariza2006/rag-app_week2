@@ -120,19 +120,26 @@ Chunk(#1, company_handbook.txt, 385-882): '...' -> vektor ölçüsü: 384, ilk 3
 python vector_store.py
 ```
 
-## Nümunə nəticə (format)
+## Nümunə nəticə (real test, `python vector_store.py` çıxışı)
 
 ```
 Sual: Neçə gün illik ödənişli məzuniyyət haqqım var?
-  #1 (məsafə=0.31, mənbə=company_handbook.txt, chunk=2):
-      şçilər üçün illik ödənişli məzuniyyət hüququ nəzərdə tutulmuşdur...
+  #1 (məsafə=0.7480, chunk=1): İŞ SAATLARI VƏ UZAQDAN İŞLƏMƏ...
+  #2 (məsafə=0.8094, chunk=2): ...illik ödənişli məzuniyyət hüququ nəzərdə tutulmuşdur...
 
 Sual: Uzaqdan işləmək üçün nə etməliyəm?
-  #1 (məsafə=0.42, mənbə=company_handbook.txt, chunk=1):
-      : İŞ SAATLARI VƏ UZAQDAN İŞLƏMƏ  Standart iş saatları həftə...
+  #1 (məsafə=0.9376, chunk=4): TEXNİKİ AVADANLIQ...
+  #2 (məsafə=1.0365, chunk=0): ÜMUMİ MƏLUMAT...
+
+Sual: Şirkət nə vaxt təsis edilib?
+  #1 (məsafə=1.0873, chunk=0): TechNova MMC 2015-ci ildə Bakıda təsis edilmiş... ✅ DÜZ CAVAB
 ```
 
-Nəticələr göstərir ki, hər sual **mövzuca ən uyğun** chunk-ı tapır (aşağı məsafə = yüksək oxşarlıq), yəni embedding + Chroma axtarışı düzgün işləyir.
+## Test zamanı aşkarlanan məhdudiyyət (iteration qeydi)
+
+3-cü sualda ("Şirkət nə vaxt təsis edilib?") axtarış tam düzgün chunk-ı (0-cı, təsis tarixi olan) 1-ci yerə çıxarıb. Lakin 2-ci sualda ("Uzaqdan işləmək üçün nə etməliyəm?") gözlənilən cavab olan 1-ci chunk (uzaqdan iş qaydaları) top-2-yə düşməyib — əvəzinə ümumi/texniki bölmələr çıxıb.
+
+Bu, kiçik embedding modelinin (`all-MiniLM-L6-v2`) və çox kiçik sənəd toplusunun (cəmi 5 chunk) real məhdudiyyətidir: model bəzi sorğularda mövzu oxşarlığını dəqiq ayırd edə bilmir. Production mühitdə bu, daha böyük/güclü embedding modeli (məs. `bge-large` və ya OpenAI `text-embedding-3`), daha çox sənəd (kontekst zənginliyi) və ya **hybrid search** (keyword + vector) ilə yaxşılaşdırıla bilər.
 
 ## Qeyd
 
